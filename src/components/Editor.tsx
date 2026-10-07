@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Point, Viewport, Wall } from '../types';
-import { dist, SNAP_PIXELS, wallPolygon } from '../utils/geometry';
+import { closestPointOnSegment, dist, SNAP_PIXELS, wallPolygon } from '../utils/geometry';
 import './Editor.css';
 
 interface EditorProps {
@@ -71,28 +71,47 @@ export function Editor({ walls, selectedId, tool, onSelect, onMoveEndpoint }: Ed
     }
     if (drag) {
       let p = toWorld(e);
-      // snap to nearest endpoint of other walls within SNAP_PIXELS (screen pixels)
-      let bestSnap: Point | null = null;
-      let bestDistPx = SNAP_PIXELS;
+      // Phase 1: Snap to nearest endpoint of other walls (endpoint snap must win when both in range)
+      let bestEndpoint: Point | null = null;
+      let bestEndpointDistPx = SNAP_PIXELS;
 
       for (const w of walls) {
         if (w.id === drag.id) continue;
 
         const dStartPx = dist(p, w.start) * viewport.scale;
-        if (dStartPx < bestDistPx) {
-          bestDistPx = dStartPx;
-          bestSnap = w.start;
+        if (dStartPx < bestEndpointDistPx) {
+          bestEndpointDistPx = dStartPx;
+          bestEndpoint = w.start;
         }
 
         const dEndPx = dist(p, w.end) * viewport.scale;
-        if (dEndPx < bestDistPx) {
-          bestDistPx = dEndPx;
-          bestSnap = w.end;
+        if (dEndPx < bestEndpointDistPx) {
+          bestEndpointDistPx = dEndPx;
+          bestEndpoint = w.end;
         }
       }
 
-      if (bestSnap) {
-        p = { x: bestSnap.x, y: bestSnap.y };
+      if (bestEndpoint) {
+        p = { x: bestEndpoint.x, y: bestEndpoint.y };
+      } else {
+        // Phase 2: If no endpoint in range, check for T-junction snap onto other walls' centerlines
+        let bestCenterline: Point | null = null;
+        let bestCenterlineDistPx = SNAP_PIXELS;
+
+        for (const w of walls) {
+          if (w.id === drag.id) continue;
+
+          const closest = closestPointOnSegment(p, w.start, w.end);
+          const dCenterPx = dist(p, closest) * viewport.scale;
+          if (dCenterPx < bestCenterlineDistPx) {
+            bestCenterlineDistPx = dCenterPx;
+            bestCenterline = closest;
+          }
+        }
+
+        if (bestCenterline) {
+          p = { x: bestCenterline.x, y: bestCenterline.y };
+        }
       }
       onMoveEndpoint(drag.id, drag.which, p);
     }

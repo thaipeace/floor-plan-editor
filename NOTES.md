@@ -49,12 +49,34 @@ Snapping was measured using a fixed world-space constant `SNAP_DIST = 0.5` feet.
 
 ---
 
-## Feature: T-junction Snapping (Upcoming)
-- Snap dragged endpoint to nearest point on another wall's centerline within 12 screen pixels.
-- Endpoint-to-endpoint snap must take precedence.
-- Wall being dragged never snaps to itself.
+## Feature: T-junction Snapping
+
+### Requirement & Design
+Allows a dragged wall endpoint to snap onto the centerline of another wall within 12 screen pixels, forming a T-junction.
+
+### How I drove the process & worked with AI
+1. **Geometric Vector Projection**: Directed extracting the projection logic into a pure mathematical utility `closestPointOnSegment(p, a, b)` in `geometry.ts`. It projects point `p` onto segment `[a, b]`, clamps `t` to `[0, 1]`, and safely handles zero-length segments (`lenSq === 0`) to prevent division-by-zero `NaN` bugs.
+2. **Two-Phase Precedence Architecture**: Enforced a strict two-phase pipeline in `Editor.tsx`:
+   - *Phase 1*: Search for the nearest endpoint of other walls within 12 screen pixels.
+   - *Phase 2*: Only if no endpoint is found in range, search for the nearest centerline point within 12 screen pixels.
+   - This architectural separation guarantees that endpoint snapping unconditionally wins when both are in range.
+3. **Self-Snapping Exclusion**: Ensured `w.id === drag.id` is excluded across both phases so a wall cannot snap to itself.
+4. **Test-Driven Verification**: Expanded `geometry.test.ts` with 5 new unit tests covering horizontal, vertical, clamped projections, and zero-length degenerate cases (100% pass rate).
+5. **Result**: Validated in the browser across multiple zoom levels. Moving endpoints along intersecting walls glides smoothly along centerlines and snaps cleanly into corners when approaching endpoints.
 
 ---
 
 ## Other Codebase Observations (Noticed, but left untouched)
-*(To be detailed as we progress)*
+
+Per the ground rules to keep changes surgical and avoid rewriting the app, I cataloged the following code smells and potential improvements:
+
+1. **Stale `w.length` on Endpoint Movement (`App.tsx`)**:
+   `handleMoveEndpoint` updates `start` or `end`, but does not recalculate `w.length`. Consequently, the length readout in `SidePanel` becomes stale as walls are edited. Left untouched to avoid altering the state contract unexpectedly.
+2. **Array Index as React Key (`Editor.tsx` & `SidePanel.tsx`)**:
+   Both components render wall lists using `key={i}` instead of `key={w.id}`. If walls are deleted, added, or reordered in the future, this could cause rendering anomalies.
+3. **Pervasive `any` Typing on Events (`Editor.tsx` & `App.tsx`)**:
+   Pointer and wheel events are typed as `(e: any)`, and API fetch uses `(data: any)`. Replacing these with `React.PointerEvent<SVGSVGElement>` and explicit schema interfaces would improve type safety.
+4. **Missing Pointer Capture on SVG (`Editor.tsx`)**:
+   Endpoint dragging relies on SVG `onPointerMove`. Fast cursor sweeps out of the browser viewport can lose track of drag events. Using `setPointerCapture` or a global window listener would improve dragging robustness.
+5. **Duplicate Distance Utilities (`geometry.ts`)**:
+   `geometry.ts` exports both `dist(a: Point, b: Point)` and `distance(x1, y1, x2, y2)`. Consolidating onto `dist` would reduce API redundancy.

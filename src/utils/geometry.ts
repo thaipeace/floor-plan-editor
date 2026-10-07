@@ -12,6 +12,22 @@ export function distance(x1: number, y1: number, x2: number, y2: number): number
   return Math.sqrt(dx * dx + dy * dy);
 }
 
+// find the closest point on a line segment [a, b] to a point p
+export function closestPointOnSegment(p: Point, a: Point, b: Point): Point {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return { x: a.x, y: a.y };
+
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+
+  return {
+    x: a.x + t * dx,
+    y: a.y + t * dy,
+  };
+}
+
 // how close an endpoint needs to be to snap (in screen pixels)
 export const SNAP_PIXELS = 12;
 export const SNAP_DIST = 0.5;
