@@ -12,7 +12,8 @@ export function distance(x1: number, y1: number, x2: number, y2: number): number
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-// how close an endpoint needs to be to snap
+// how close an endpoint needs to be to snap (in screen pixels)
+export const SNAP_PIXELS = 12;
 export const SNAP_DIST = 0.5;
 
 // build the polygon points string for a wall with thickness

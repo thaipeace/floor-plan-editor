@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Point, Viewport, Wall } from '../types';
-import { dist, SNAP_DIST, wallPolygon } from '../utils/geometry';
+import { dist, SNAP_PIXELS, wallPolygon } from '../utils/geometry';
 import './Editor.css';
 
 interface EditorProps {
@@ -71,15 +71,28 @@ export function Editor({ walls, selectedId, tool, onSelect, onMoveEndpoint }: Ed
     }
     if (drag) {
       let p = toWorld(e);
-      // snap to nearby endpoints of other walls
+      // snap to nearest endpoint of other walls within SNAP_PIXELS (screen pixels)
+      let bestSnap: Point | null = null;
+      let bestDistPx = SNAP_PIXELS;
+
       for (const w of walls) {
         if (w.id === drag.id) continue;
-        if (dist(p, w.start) < SNAP_DIST) {
-          p = { x: w.start.x, y: w.start.y };
+
+        const dStartPx = dist(p, w.start) * viewport.scale;
+        if (dStartPx < bestDistPx) {
+          bestDistPx = dStartPx;
+          bestSnap = w.start;
         }
-        if (dist(p, w.end) < SNAP_DIST) {
-          p = { x: w.end.x, y: w.end.y };
+
+        const dEndPx = dist(p, w.end) * viewport.scale;
+        if (dEndPx < bestDistPx) {
+          bestDistPx = dEndPx;
+          bestSnap = w.end;
         }
+      }
+
+      if (bestSnap) {
+        p = { x: bestSnap.x, y: bestSnap.y };
       }
       onMoveEndpoint(drag.id, drag.which, p);
     }
