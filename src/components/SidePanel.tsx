@@ -37,7 +37,7 @@ export function SidePanel({ walls, selectedId, onSelect, onThickness }: SidePane
   const selected = walls.find((w) => w.id === selectedId);
 
   return (
-    <div className="panel" style={{ background: '#ececec', paddingTop: 6 }}>
+    <div className="panel">
       <h2>Walls</h2>
       <div>
         {walls.map((w, i) => (
