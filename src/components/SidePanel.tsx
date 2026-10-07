@@ -8,29 +8,33 @@ interface SidePanelProps {
   onThickness: (id: string, thickness: number) => void;
 }
 
+interface ThicknessFieldProps {
+  value: number;
+  onChange: (value: number) => void;
+}
+
+// input for editing the thickness of the selected wall
+function ThicknessField({ value, onChange }: ThicknessFieldProps) {
+  return (
+    <input
+      type="number"
+      step="0.05"
+      value={value}
+      onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+      style={{
+        width: '100%',
+        padding: '6px 8px',
+        border: '1px solid #ccc',
+        borderRadius: 4,
+        boxSizing: 'border-box',
+        background: '#ffffff',
+      }}
+    />
+  );
+}
+
 export function SidePanel({ walls, selectedId, onSelect, onThickness }: SidePanelProps) {
   const selected = walls.find((w) => w.id === selectedId);
-
-  // input for editing the thickness of the selected wall
-  const ThicknessField = () => {
-    if (!selected) return null;
-    return (
-      <input
-        type="number"
-        step="0.05"
-        value={selected.thickness}
-        onChange={(e) => onThickness(selected.id, parseFloat(e.target.value) || 0)}
-        style={{
-          width: '100%',
-          padding: '6px 8px',
-          border: '1px solid #ccc',
-          borderRadius: 4,
-          boxSizing: 'border-box',
-          background: '#ffffff',
-        }}
-      />
-    );
-  };
 
   return (
     <div className="panel" style={{ background: '#ececec', paddingTop: 6 }}>
@@ -53,7 +57,10 @@ export function SidePanel({ walls, selectedId, onSelect, onThickness }: SidePane
             {selected.length.toFixed(1)} ft
           </div>
           <div className="field-label">THICKNESS (FT)</div>
-          <ThicknessField />
+          <ThicknessField
+            value={selected.thickness}
+            onChange={(thickness) => onThickness(selected.id, thickness)}
+          />
         </div>
       )}
     </div>
