@@ -14,7 +14,7 @@ Typing in the thickness field dropped focus after every keystroke. `ThicknessFie
 ### How I drove the process & worked with AI
 1. **Replicate first**: Before touching any code, I asked AI to provide exact steps to reproduce the bug in the browser so I could inspect the behavior myself.
 2. **Deep-dive on the mechanism**: When AI briefly mentioned a "re-render", I challenged it: *where exactly is it being destroyed?* This led to the exact explanation of React Fiber unmounting the DOM node rather than a normal re-render update.
-3. **Architectural direction**: When offered a simple inline fix, I challenged the design: *what if we want to extend this or extract it into a UI library later?* I directed AI to implement Option 2: extracting `ThicknessField` outside `SidePanel` as a standalone component with explicit props (`value`, `onChange`).
+3. **Architectural direction**: When AI offered a simple inline fix, I challenged the design: *what if we want to extend this or extract it into a UI library later?* I directed AI to implement Option 2: extracting `ThicknessField` outside `SidePanel` as a standalone component with explicit props (`value`, `onChange`).
 4. **Result**: Input retains focus smoothly on every keystroke, and the component is now modular and testable.
 
 ---
@@ -28,14 +28,24 @@ The side panel was visually cramped (240px wide, 4px padding, dark gray `#ececec
 
 ### How I drove the process & worked with AI
 1. **Empirical verification**: I tested editing `Editor.css` and verified in DevTools that inline styles and duplicate CSS files were overriding the rules.
-2. **Architectural debate**: I challenged AI proposing to consolidate everything into `SidePanel.css` for better component scoping. We debated the tradeoff: QA specifically expected edits in `Editor.css` to take effect. I made the call to go with the surgical fix to satisfy QA's acceptance test directly, while logging the scoped styling recommendation as future tech debt.
+2. **Architectural debate**: AI suggested change style on `Editor.css` I challenged AI proposing to consolidate everything into `SidePanel.css` for better component scoping. We debated the tradeoff: QA specifically expected edits in `Editor.css` to take effect. I made the call to go with the surgical fix to satisfy QA's acceptance test directly, while logging the scoped styling recommendation as future tech debt.
 3. **Result**: Removed inline styles in `SidePanel.tsx` and purged duplicate rules from `SidePanel.css`. The panel now displays the clean 280px white layout from `Editor.css`, and edits to `Editor.css` take effect immediately.
 
 ---
 
-## Ticket T1: Snapping Scale-Invariance (In Progress)
-- **Current status**: Replicated the issue. Snapping works when zoomed in, but fails when zoomed out because `SNAP_DIST = 0.5` is in world units (feet). At scale 100, snap radius is 50px (very easy); at scale 5, snap radius is 2.5px (almost impossible to hit).
-- **Next step**: Convert snap distance to screen pixels (12px) so snapping feels identical at every zoom level.
+## Ticket T1: Snapping Scale-Invariance & Extreme Zoom Handle UX
+
+### What was broken & Why
+Snapping was measured using a fixed world-space constant `SNAP_DIST = 0.5` feet. When zoomed out (e.g. scale = 5), the snap radius on screen shrank to 2.5px — much smaller than the physical cursor arrow (16–24px) and smaller than mouse acceleration jumps, making triggering snap nearly impossible. Conversely, when zoomed in, the world-space threshold ballooned into dozens of screen pixels. Furthermore, the starter loop greedily overwrote the snap target based on array order rather than picking the nearest candidate.
+
+### How I drove the process & worked with AI
+1. **Deconstructed the coordinate spaces**: Identified that snapping is a human-computer interaction (HCI) affordance that must be evaluated in screen pixels (`12px`), converting world distance via `dist * viewport.scale < SNAP_PIXELS`.
+2. **Nearest-candidate algorithm**: Challenged the old greedy array loop and directed the implementation to find the true minimum-distance candidate (`minDistance`), resolving ambiguity when multiple endpoints are near the cursor.
+3. **Discovered & challenged extreme zoom anomaly**: While testing at 25x zoom, I noticed that snapping felt unresponsive. I identified the root cause: the visual handle circle had a fixed world radius (`r = 0.35 ft`), which ballooned to over 100px wide when zoomed in, creating an optical illusion where the mouse was visually inside the circle but still outside the 12px center threshold.
+4. **Architected the Invisible Hitbox UX**: Rather than inflating the snap threshold (which would break the 12px spec and interfere with T-junction snapping), I directed standard CAD interaction patterns:
+   - Kept the visual handle at a constant, elegant 8 screen pixels (`8 / viewport.scale`).
+   - Added an expanded transparent hitbox (`Math.max(thickness / 2 + 0.1, 18 / viewport.scale)`) with `cursor: 'grab'`.
+5. **Result**: Clicking and grabbing handles is effortless at every zoom level without requiring sniper-like mouse aim, and snapping operates with crisp 12px tactile precision.
 
 ---
 

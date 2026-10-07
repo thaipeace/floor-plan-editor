@@ -144,29 +144,48 @@ export function Editor({ walls, selectedId, tool, onSelect, onMoveEndpoint }: Ed
           ))}
           {selected && (
             <>
+              {/* Start Endpoint: Invisible Hitbox + Crisp Visual Dot */}
               <circle
                 cx={selected.start.x}
                 cy={selected.start.y}
-                r={0.35}
-                fill="#ffffff"
-                stroke="#2f6cb0"
-                strokeWidth={0.08}
+                r={Math.max(selected.thickness / 2 + 0.1, 18 / viewport.scale)}
+                fill="transparent"
+                style={{ cursor: 'grab' }}
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   setDrag({ id: selected.id, which: 'start' });
                 }}
               />
               <circle
-                cx={selected.end.x}
-                cy={selected.end.y}
-                r={0.35}
+                cx={selected.start.x}
+                cy={selected.start.y}
+                r={8 / viewport.scale}
                 fill="#ffffff"
                 stroke="#2f6cb0"
-                strokeWidth={0.08}
+                strokeWidth={1.5 / viewport.scale}
+                pointerEvents="none"
+              />
+
+              {/* End Endpoint: Invisible Hitbox + Crisp Visual Dot */}
+              <circle
+                cx={selected.end.x}
+                cy={selected.end.y}
+                r={Math.max(selected.thickness / 2 + 0.1, 18 / viewport.scale)}
+                fill="transparent"
+                style={{ cursor: 'grab' }}
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   setDrag({ id: selected.id, which: 'end' });
                 }}
+              />
+              <circle
+                cx={selected.end.x}
+                cy={selected.end.y}
+                r={8 / viewport.scale}
+                fill="#ffffff"
+                stroke="#2f6cb0"
+                strokeWidth={1.5 / viewport.scale}
+                pointerEvents="none"
               />
             </>
           )}
